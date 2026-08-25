@@ -26,6 +26,21 @@ function courseStats(course: string, lessons: string[], progress = readProgress(
   return { completed, total: lessons.length, percent: lessons.length ? Math.round((completed / lessons.length) * 100) : 0 };
 }
 
+function seedDashboardMeta(main: HTMLElement, hero: HTMLElement) {
+  const meta = readMeta();
+  const courseCard = main.querySelector<HTMLElement>('.courseCard');
+  const course = courseCard?.querySelector('h3')?.textContent?.trim() || hero.querySelector('h1')?.textContent?.trim();
+  if (!course || meta[course]?.length) return meta;
+
+  const countText = courseCard?.querySelector('span')?.textContent || '';
+  const total = Number(countText.match(/(\d+)\s+lesson/i)?.[1] || 0);
+  if (total > 0) {
+    meta[course] = Array.from({ length: total }, (_, index) => `Lesson ${index + 1}`);
+    writeMeta(meta);
+  }
+  return meta;
+}
+
 function renderLearnTracker() {
   const learn = document.querySelector<HTMLElement>('.learn');
   if (!learn) return;
@@ -75,7 +90,10 @@ function renderDashboardTracker() {
   const main = document.querySelector<HTMLElement>('main');
   const hero = main?.querySelector<HTMLElement>('.hero');
   if (!main || !hero) return;
-  const meta = readMeta(); const progress = readProgress(); const current = readCurrent();
+
+  const meta = seedDashboardMeta(main, hero);
+  const progress = readProgress();
+  const current = readCurrent();
   const courses = Object.entries(meta).filter(([, lessons]) => lessons.length);
   if (!courses.length) return;
 
@@ -84,10 +102,11 @@ function renderDashboardTracker() {
   const total = courses.reduce((sum, [, lessons]) => sum + lessons.length, 0);
   const completed = courses.reduce((sum, [course, lessons]) => sum + courseStats(course, lessons, progress).completed, 0);
   const percent = total ? Math.round((completed / total) * 100) : 0;
+
   const dashboard = document.createElement('section');
-  dashboard.className = 'dashboardProgress';
-  dashboard.innerHTML = `<div class="dashboardProgressTop"><div><small>LEARNING PROGRESS</small><h2>${percent}% complete</h2></div><b>${completed} / ${total} lessons</b></div><div class="dashboardBar"><i style="width:${percent}%"></i></div>${current ? `<div class="dashboardCurrent"><span>Current lesson</span><b>${escapeHtml(current.lesson)}</b><small>${escapeHtml(current.course)}</small></div>` : ''}`;
-  hero.insertAdjacentElement('afterend', dashboard);
+  dashboard.className = 'dashboardProgress dashboardProgressInline';
+  dashboard.innerHTML = `<div class="dashboardProgressTop"><div><small>LEARNING PROGRESS</small><h2>${percent}% complete</h2></div><b>${completed} / ${total} lessons</b></div><div class="dashboardBar"><i style="width:${percent}%"></i></div><div class="dashboardCurrent"><span>Current lesson</span><b>${escapeHtml(current?.lesson || 'Start your first lesson')}</b><small>${escapeHtml(current?.course || courses[0]?.[0] || '')}</small></div>`;
+  hero.appendChild(dashboard);
 
   const cards = Array.from(main.querySelectorAll<HTMLElement>('.courseCard'));
   cards.forEach((card, index) => {
@@ -115,5 +134,7 @@ let scheduled = false;
 function scheduleRender() { if (scheduled) return; scheduled = true; requestAnimationFrame(() => { scheduled = false; renderTracker(); }); }
 const observer = new MutationObserver(scheduleRender);
 observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+window.addEventListener('storage', () => { lastSignature = ''; scheduleRender(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { lastSignature = ''; scheduleRender(); } });
 document.addEventListener('click', event => { if ((event.target as Element | null)?.closest('.playlist button')) { lastSignature = ''; scheduleRender(); } });
 scheduleRender();

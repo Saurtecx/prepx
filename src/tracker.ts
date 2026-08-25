@@ -1,5 +1,7 @@
 type ProgressMap = Record<string, true>;
 
+let lastSignature = '';
+
 const storageKey = () => {
   try {
     const session = JSON.parse(localStorage.getItem('prepx_session') || '{}');
@@ -15,16 +17,11 @@ const readProgress = (): ProgressMap => {
 };
 
 const writeProgress = (value: ProgressMap) => localStorage.setItem(storageKey(), JSON.stringify(value));
-
 const lessonKey = (course: string, lesson: string) => `${course}::${lesson}`;
 
-function getLearnRoot() {
-  return document.querySelector<HTMLElement>('.learn');
-}
-
 function renderTracker() {
-  const learn = getLearnRoot();
-  if (!learn) return;
+  const learn = document.querySelector<HTMLElement>('.learn');
+  if (!learn) { lastSignature = ''; return; }
 
   const playlist = learn.querySelector<HTMLElement>('.playlist');
   const content = learn.querySelector<HTMLElement>('.learnGrid > section:first-child');
@@ -37,6 +34,9 @@ function renderTracker() {
   const currentButton = playlist.querySelector<HTMLButtonElement>('button.now') || lessonButtons[0];
   const currentLesson = currentButton.textContent?.trim() || 'Lesson';
   const progress = readProgress();
+  const signature = JSON.stringify({ course, lessons: lessonButtons.map(b => b.textContent?.trim() || ''), currentLesson, progress });
+  if (signature === lastSignature) return;
+  lastSignature = signature;
 
   lessonButtons.forEach(button => {
     const key = lessonKey(course, button.textContent?.trim() || 'Lesson');
@@ -53,19 +53,16 @@ function renderTracker() {
 
   const tracker = document.createElement('div');
   tracker.className = 'progressTracker';
-  tracker.innerHTML = `
-    <div class="progressHead"><span>YOUR PROGRESS</span><b>${completed} / ${lessonButtons.length} complete</b></div>
-    <div class="progressBar"><i style="width:${percent}%"></i></div>
-  `;
+  tracker.innerHTML = `<div class="progressHead"><span>YOUR PROGRESS</span><b>${completed} / ${lessonButtons.length} complete</b></div><div class="progressBar"><i style="width:${percent}%"></i></div>`;
 
   const completeButton = document.createElement('button');
   completeButton.className = `completeLesson${done ? ' done' : ''}`;
   completeButton.textContent = done ? '✓ Lesson completed' : 'Mark lesson complete';
   completeButton.addEventListener('click', () => {
     const next = readProgress();
-    if (next[currentKey]) delete next[currentKey];
-    else next[currentKey] = true;
+    if (next[currentKey]) delete next[currentKey]; else next[currentKey] = true;
     writeProgress(next);
+    lastSignature = '';
     renderTracker();
   });
   tracker.appendChild(completeButton);
@@ -81,10 +78,7 @@ let scheduled = false;
 function scheduleRender() {
   if (scheduled) return;
   scheduled = true;
-  requestAnimationFrame(() => {
-    scheduled = false;
-    renderTracker();
-  });
+  requestAnimationFrame(() => { scheduled = false; renderTracker(); });
 }
 
 const observer = new MutationObserver(scheduleRender);

@@ -174,9 +174,20 @@ function Admin({modules,refresh,token}:{modules:Module[];refresh:()=>Promise<voi
 }
 
 function Learn({cur,modules,courseTitle,setActive,back,logout}:any){
+  const [playerReady,setPlayerReady] = useState(cur?.type !== 'video');
+
+  useEffect(()=>{
+    setPlayerReady(cur?.type !== 'video');
+    if(cur?.type !== 'video') return;
+    return undefined;
+  },[cur?.id,cur?.type]);
+
   if(!cur)return <div className="learn"><button onClick={back}><ArrowLeft/> Back</button><p>No content available.</p></div>;
   const src=cur.driveFileId?drivePreview(cur.driveFileId):cur.sourceUrl;
-  return <div className="learn"><header><button onClick={back}><ArrowLeft/> {courseTitle}</button><b>{cur.moduleName}</b><button onClick={logout}><LogOut size={16}/>Sign out</button></header><div className="learnGrid"><section>{src?(cur.type==='image'?<div className="video"><img src={src} alt={cur.title} style={{maxWidth:'100%',maxHeight:'100%'}}/></div>:<div className="video"><iframe src={src} title={cur.title} allow="autoplay" allowFullScreen style={{width:'100%',height:'100%',border:0}}/></div>):<div className="video"><Play size={42}/></div>}<small>CURRENT LESSON</small><h1>{cur.title}</h1><p>{cur.type}</p></section><section className="playlist"><h3>{courseTitle}</h3>{modules.map((m:Module)=><div key={m.id}><small>{m.title}</small>{m.items.map(i=><button key={i.id} className={i.id===cur.id?'now':''} onClick={()=>setActive(i.id)}>{iconFor(i.type)}{i.title}</button>)}</div>)}</section></div></div>;
+  const revealPlayer=()=>{
+    window.setTimeout(()=>setPlayerReady(true),1800);
+  };
+  return <div className="learn"><header><button onClick={back}><ArrowLeft/> {courseTitle}</button><b>{cur.moduleName}</b><button onClick={logout}><LogOut size={16}/>Sign out</button></header><div className="learnGrid"><section><div className="video" style={{position:'relative'}}>{src?(cur.type==='image'?<div style={{width:'100%',height:'100%',display:'flex',justifyContent:'center',alignItems:'center'}}><img src={src} alt={cur.title} style={{maxWidth:'100%',maxHeight:'100%'}}/></div>:<><iframe key={cur.id} src={src} title={cur.title} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen loading="eager" style={{width:'100%',height:'100%',border:0,opacity:playerReady?1:0,transition:'opacity .2s ease'}} onLoad={revealPlayer}/>{!playerReady&&<div style={{position:'absolute',inset:0,display:'grid',placeItems:'center',background:'#020305',color:'#969da9'}}><div style={{display:'grid',placeItems:'center',gap:10}}><LoaderCircle className="spin" size={30}/><span>Loading video…</span></div></div>}</>):<div className="video"><Play size={42}/></div>}<small>CURRENT LESSON</small><h1>{cur.title}</h1><p>{cur.type}</p></section><section className="playlist"><h3>{courseTitle}</h3>{modules.map((m:Module)=><div key={m.id}><small>{m.title}</small>{m.items.map(i=><button key={i.id} className={i.id===cur.id?'now':''} onClick={()=>setActive(i.id)}>{iconFor(i.type)}{i.title}</button>)}</div>)}</section></div></div>;
 }
 
 createRoot(document.getElementById('root')!).render(<App/>);

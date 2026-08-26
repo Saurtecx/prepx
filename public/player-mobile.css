@@ -1,4 +1,4 @@
-/* Keep embedded lesson players inside a real 16:9 viewport on phones. */
+/* Keep embedded lesson players inside a stable viewport on phones. */
 .video { position:relative; width:100%; overflow:hidden; background:#020305; }
 .video > iframe,
 .video > video,
@@ -16,15 +16,17 @@
 
 @media (max-width:800px) {
   .learnGrid .video {
-    aspect-ratio:16 / 9 !important;
+    /* A little extra vertical room lets the embedded Drive controls use
+       their mobile layout without clipping the seek bar or bottom buttons. */
+    aspect-ratio:3 / 2 !important;
     height:auto !important;
     min-height:0 !important;
     max-height:none !important;
     border-radius:14px;
     isolation:isolate;
+    touch-action:pan-y;
   }
 
-  /* Prevent fixed-size embedded players from being scaled/cropped. */
   .learnGrid .video > iframe,
   .learnGrid .video > video,
   .learnGrid .video iframe,
@@ -36,4 +38,8 @@
     object-fit:contain !important;
     transform:none !important;
   }
+}
+
+@media (min-width:481px) and (max-width:800px) {
+  .learnGrid .video { aspect-ratio:16 / 9 !important; }
 }

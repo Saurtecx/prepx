@@ -1,7 +1,5 @@
 export {};
 
-// Try a native HTML5 player for Google Drive videos. If Drive refuses the media
-// request, immediately restore the original preview iframe so lessons never go blank.
 const style = document.createElement('style');
 style.id = 'prepx-drive-responsive-fix';
 style.textContent = `
@@ -31,23 +29,46 @@ function upgrade(frame: HTMLIFrameElement) {
   video.playsInline = true;
   video.preload = 'metadata';
   video.setAttribute('controlsList', 'nodownload');
-  // Google Drive's content endpoint is used only as an enhancement. The iframe
-  // remains the safe fallback because Drive can reject direct media requests.
-  video.src = `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download&confirm=t`;
 
+  // This endpoint is the most useful direct candidate for publicly accessible
+  // Drive files. It is different from the normal /uc endpoint and avoids the
+  // Drive preview page when Google permits direct media delivery.
+  const candidates = [
+    `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download&confirm=t`,
+    `https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}`
+  ];
+
+  let candidate = 0;
   let restored = false;
+  let timer = 0;
+
   const restore = () => {
     if (restored) return;
     restored = true;
+    window.clearTimeout(timer);
     if (video.parentNode) video.replaceWith(frame);
   };
 
-  video.addEventListener('error', restore, { once: true });
-  // If metadata never arrives, do not leave the user staring at a blank player.
-  const timeout = window.setTimeout(() => {
-    if (video.readyState < 1) restore();
-  }, 7000);
-  video.addEventListener('loadedmetadata', () => window.clearTimeout(timeout), { once: true });
+  const tryNext = () => {
+    window.clearTimeout(timer);
+    candidate += 1;
+    if (candidate >= candidates.length) {
+      restore();
+      return;
+    }
+    video.src = candidates[candidate];
+    video.load();
+    timer = window.setTimeout(() => {
+      if (video.readyState < 1) tryNext();
+    }, 6000);
+  };
+
+  video.addEventListener('error', tryNext);
+  video.addEventListener('loadedmetadata', () => window.clearTimeout(timer), { once: true });
+  video.src = candidates[0];
+  timer = window.setTimeout(() => {
+    if (video.readyState < 1) tryNext();
+  }, 6000);
 
   frame.replaceWith(video);
 }

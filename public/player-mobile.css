@@ -1,0 +1,39 @@
+/* Keep embedded lesson players inside a real 16:9 viewport on phones. */
+.video { position:relative; width:100%; overflow:hidden; background:#020305; }
+.video > iframe,
+.video > video,
+.video iframe,
+.video video {
+  display:block;
+  width:100% !important;
+  height:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  max-width:100% !important;
+  max-height:100% !important;
+  border:0 !important;
+}
+
+@media (max-width:800px) {
+  .learnGrid .video {
+    aspect-ratio:16 / 9 !important;
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    border-radius:14px;
+    isolation:isolate;
+  }
+
+  /* Prevent fixed-size embedded players from being scaled/cropped. */
+  .learnGrid .video > iframe,
+  .learnGrid .video > video,
+  .learnGrid .video iframe,
+  .learnGrid .video video {
+    position:absolute !important;
+    inset:0 !important;
+    width:100% !important;
+    height:100% !important;
+    object-fit:contain !important;
+    transform:none !important;
+  }
+}
